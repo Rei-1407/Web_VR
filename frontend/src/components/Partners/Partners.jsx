@@ -1,11 +1,13 @@
 import React, { useState, useEffect } from "react";
 import "./Partners.css";
 
+import { apiUrl, publicUrl } from "../../config/api";
+
 // Hàm helper để render logo (xử lý link ảnh)
 const PartnerLogo = ({ partner }) => {
   // Giả sử ảnh lưu trong folder public/uploads/partners/ của Backend
   // Nếu bạn lưu chỗ khác thì sửa lại đường dẫn này
-  const imgUrl = `http://localhost:5000/public/${partner.logo_url}`;
+  const imgUrl = publicUrl(partner.logo_url);
   
   return (
     <a 
@@ -31,7 +33,7 @@ function Partners() {
   const [partners, setPartners] = useState([]);
 
   useEffect(() => {
-    fetch("http://localhost:5000/api/partners")
+    fetch(apiUrl("api/partners"))
       .then((res) => res.json())
       .then((data) => setPartners(data))
       .catch((err) => console.error(err));

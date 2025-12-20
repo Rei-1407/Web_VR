@@ -4,7 +4,7 @@ import * as THREE from "three";
 
 const SPEED = 0.15;
 
-export default function FirstPersonCamera({ active }) {
+export default function FirstPersonCamera({ active, playerRef }) {
   const { camera } = useThree();
   const keys = useRef({ w: false, a: false, s: false, d: false });
 
@@ -47,8 +47,9 @@ export default function FirstPersonCamera({ active }) {
       .multiplyScalar(SPEED)
       .applyEuler(camera.rotation);
 
-    camera.position.add(direction);
-    camera.position.y = 2; 
+    const target = playerRef?.current || camera;
+    target.position.add(direction);
+    target.position.y = 2; 
   });
 
   return null;

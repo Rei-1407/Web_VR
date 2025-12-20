@@ -9,6 +9,8 @@ import "./CampusShowcase.css";
 import { Canvas, useThree } from "@react-three/fiber";
 import { useGLTF, Stage, Html, useProgress, OrbitControls } from "@react-three/drei";
 
+import { apiUrl, publicUrl } from "../../config/api";
+
 // --- LOADER ---
 function Loader() {
   const { progress } = useProgress();
@@ -64,7 +66,7 @@ const CampusModal = ({ campus, onClose }) => {
 
   useEffect(() => {
     if (campus?.file_name) {
-      useGLTF.preload(`http://localhost:5000/public/${campus.file_name}`);
+      useGLTF.preload(publicUrl(campus.file_name));
     }
   }, [campus]);
 
@@ -72,6 +74,10 @@ const CampusModal = ({ campus, onClose }) => {
 
   const handleView3D = () => {
     navigate(`/tour/${campus.id}`, { state: { campus: campus } });
+  };
+
+  const handleViewVR = () => {
+    navigate(`/tour/${campus.id}?vr=1`, { state: { campus: campus, vr: true } });
   };
 
   return (
@@ -88,7 +94,7 @@ const CampusModal = ({ campus, onClose }) => {
               <FixLayout />
               <Suspense fallback={<Loader />}>
                 <Stage environment="city" intensity={1} contactShadow={false} adjustCamera={1.2}>
-                  <Model3D url={`http://localhost:5000/public/${campus.file_name}`} />
+                  <Model3D url={publicUrl(campus.file_name)} />
                 </Stage>
               </Suspense>
               <OrbitControls 
@@ -119,7 +125,7 @@ const CampusModal = ({ campus, onClose }) => {
               <button className="btn-3d-action" onClick={handleView3D}>
                 <i className="bi bi-controller"></i> BẮT ĐẦU THAM QUAN
               </button>
-              <button className="btn-vr-action">
+              <button className="btn-vr-action" onClick={handleViewVR}>
                 <i className="bi bi-eyeglasses"></i> TRẢI NGHIỆM VR
               </button>
             </div>
@@ -136,7 +142,7 @@ function CampusShowcase() {
   const [selectedCampus, setSelectedCampus] = useState(null);
 
   useEffect(() => {
-    fetch("http://localhost:5000/api/campus")
+    fetch(apiUrl("api/campus"))
       .then((res) => res.json())
       .then((data) => {
         if (Array.isArray(data)) setCampuses(data);
@@ -170,7 +176,7 @@ function CampusShowcase() {
               <div className="campus-card-item">
                 <div className="card-img-wrapper">
                   <img 
-                    src={campus.thumbnail ? `http://localhost:5000/public/${campus.thumbnail}` : "https://via.placeholder.com/600x400?text=PTIT+Campus"} 
+                    src={campus.thumbnail ? publicUrl(campus.thumbnail) : "https://via.placeholder.com/600x400?text=PTIT+Campus"} 
                     alt={campus.name}
                     className="card-thumb"
                   />

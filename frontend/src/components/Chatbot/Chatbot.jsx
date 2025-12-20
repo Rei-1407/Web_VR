@@ -1,6 +1,8 @@
 import React, { useState, useRef, useEffect } from "react";
 import "./Chatbot.css";
 
+import { apiUrl } from "../../config/api";
+
 export default function Chatbot() {
   const [isOpen, setIsOpen] = useState(false);
   const [messages, setMessages] = useState([
@@ -28,7 +30,7 @@ export default function Chatbot() {
 
     try {
       // 2. Gửi sang Backend Gemini
-      const response = await fetch("http://localhost:5000/api/chat", {
+      const response = await fetch(apiUrl("api/chat"), {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ message: userText }),

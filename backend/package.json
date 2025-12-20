@@ -4,6 +4,7 @@
   "description": "",
   "main": "index.js",
   "scripts": {
+    "db:import": "node scripts/import-db.js",
     "test": "echo \"Error: no test specified\" && exit 1",
     "start": "node server.js"
   },

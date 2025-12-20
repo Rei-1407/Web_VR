@@ -2,12 +2,13 @@ import React, { useState, useEffect } from "react";
 import CountUp from "react-countup"; // Chỉ cần import cái này
 import "./Achievements.css";
 import PlaceholderImg from "../../assets/images/slider/slider1.jpg"; 
+import { apiUrl, publicUrl } from "../../config/api";
 
 function Achievements() {
   const [items, setItems] = useState([]);
 
   useEffect(() => {
-    fetch("http://localhost:5000/api/achievements")
+    fetch(apiUrl("api/achievements"))
       .then((res) => res.json())
       .then((data) => setItems(data))
       .catch((err) => console.error("Lỗi tải achievements:", err));
@@ -28,7 +29,7 @@ function Achievements() {
             {/* 1. ẢNH MÔ TẢ */}
             <div className="card-image-box">
               <img 
-                src={item.image_url ? `http://localhost:5000/public/${item.image_url}` : PlaceholderImg} 
+                src={item.image_url ? publicUrl(item.image_url) : PlaceholderImg} 
                 alt="Achievement"
                 className="achievement-img"
                 onError={(e) => e.target.src = PlaceholderImg} 

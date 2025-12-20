@@ -1,6 +1,7 @@
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect, useRef, useCallback } from "react";
 import "./Slider.css";
 import Slider1 from "../../assets/images/slider/slider1.jpg"; 
+import { apiUrl, publicUrl } from "../../config/api";
 
 function Slider() {
   const [slides, setSlides] = useState([]);
@@ -15,7 +16,7 @@ function Slider() {
 
   // 1. Gọi API lấy dữ liệu
   useEffect(() => {
-    fetch("http://localhost:5000/api/intro")
+    fetch(apiUrl("api/intro"))
       .then((res) => {
         if (!res.ok) throw new Error("Server Error");
         return res.json();
@@ -35,13 +36,13 @@ function Slider() {
   }, []);
 
   // 2. Hàm xử lý chuyển Slide
-  const changeSlide = (dir) => {
+  const changeSlide = useCallback((dir) => {
     if (animating || slides.length <= 1) return;
-    
+
     setDirection(dir);
     setAnimating(true);
 
-    setTimeout(() => {
+    window.setTimeout(() => {
       setIndex((prev) => {
         if (dir === "next") return (prev + 1) % slides.length;
         // Logic lùi (prev)
@@ -49,7 +50,7 @@ function Slider() {
       });
       setAnimating(false);
     }, 800); // Khớp với thời gian animation trong CSS
-  };
+  }, [animating, slides.length]);
 
   // 3. Tự động chạy (Auto-play)
   // Logic: Mỗi khi `index` hoặc `animating` thay đổi (tức là vừa có hành động chuyển slide),
@@ -65,7 +66,7 @@ function Slider() {
 
     // Clear interval cũ khi component unmount hoặc khi slide vừa đổi
     return () => clearInterval(interval);
-  }, [slides, index, animating]); 
+  }, [slides.length, index, animating, changeSlide]); 
 
   // === XỬ LÝ KÉO THẢ (SWIPE) ===
   const handleTouchStart = (e) => {
@@ -107,7 +108,7 @@ function Slider() {
   }
   const nextSlideData = slides[nextSlideIndex];
 
-  const getImg = (slide) => slide.image_url ? `http://localhost:5000/public/${slide.image_url}` : Slider1;
+  const getImg = (slide) => slide.image_url ? publicUrl(slide.image_url) : Slider1;
 
   return (
     <div 
@@ -138,7 +139,7 @@ function Slider() {
             <p className="slider-desc">{currentSlide.description}</p>
           </div>
 
-          <div className={`slider-content incoming ${direction} ${animating ? "slide-out-left" : ""}`}>
+          <div className={`slider-content incoming ${direction} ${animating ? "slide-in" : ""}`}>
             <h1 className="slider-main-title">{nextSlideData.title}</h1>
             <div className="slider-divider"></div>
             <p className="slider-desc">{nextSlideData.description}</p>

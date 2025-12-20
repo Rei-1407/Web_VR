@@ -1,10 +1,10 @@
 import "./App.css";
 import React from "react";
 import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
-import Home from "./components/Home/Home";
-import CampusViewerPage from "./components/Campus3D/CampusViewerPage";
-import Chatbot from "./components/Chatbot/Chatbot";
-import AdmissionForm from "./components/Admission/AdmissionForm";
+import Home from "./components/Home/Home.jsx";
+import CampusViewerPage from "./components/Campus3D/CampusViewerPage.jsx";
+import Chatbot from "./components/Chatbot/Chatbot.jsx";
+import AdmissionForm from "./components/Admission/AdmissionForm.jsx";
 
 function App() {
   return (

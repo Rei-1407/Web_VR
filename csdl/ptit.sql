@@ -33,8 +33,6 @@ UPDATE history_events SET image = 'moc-7.jpg' WHERE id = 7;
 UPDATE history_events SET image = 'moc-8.jpg' WHERE id = 8; 
 UPDATE history_events SET image = 'moc-9.jpg' WHERE id = 9; 
 
-select * from campus_models;
-
 CREATE TABLE campus_models (
     id INT AUTO_INCREMENT PRIMARY KEY,
     name VARCHAR(100) NOT NULL,
@@ -56,6 +54,8 @@ INSERT INTO campus_models (name, description, file_name, thumbnail) VALUES
     'PTIT_NT.glb', 
     'thumb-nt.jpg'
 );
+
+select * from campus_models;
 
 -- 1. Tạo bảng giới thiệu
 CREATE TABLE IF NOT EXISTS intro_slides (

@@ -1,88 +1,132 @@
-# 📖 HƯỚNG DẪN CÀI ĐẶT WEBSITE PTIT EDU (FULLSTACK)
----
+# PTIT EDU (Fullstack)
 
-## 🛠 PHẦN 1: CÀI ĐẶT CÔNG CỤ CẦN THIẾT
+Website demo fullstack gồm:
+- **Backend**: Node.js + Express + MySQL
+- **Frontend**: React + Vite
 
-Trước khi bắt đầu, hãy đảm bảo máy tính của bạn đã cài 3 phần mềm sau (nếu có rồi thì bỏ qua):
+## Chạy nhanh (khuyến nghị)
 
-1.  **Node.js** 
-2.  **MySQL**
-3.  **Visual Studio Code** 
-4.  **Git** 
+1) Cài dependencies + import database (chạy 1 lần):
+```bash
+npm run setup
+```
 
----
+2) Chạy cả backend + frontend:
+```bash
+npm start
+```
 
-## 📥 PHẦN 2: TẢI CODE VỀ MÁY (CLONE)
+Địa chỉ mặc định:
+- Backend: `http://localhost:5000`
+- Frontend (Vite): `http://localhost:3000`
 
+## Yêu cầu
 
-## 🗄 PHẦN 3: CÀI ĐẶT CƠ SỞ DỮ LIỆU (DATABASE)
+- Node.js (khuyến nghị LTS)
+- MySQL 8.x
+- Git
 
-- Mở MySQL Workbench, đặt tên csdl là ptit_edu
-- Sửa lại các thông tin như tên, mật khẩu, ... để kết nối chuẩn
+## Clone dự án
 
-## ⚙️ PHẦN 4: CÀI ĐẶT BACKEND (SERVER)
+```bash
+git clone <YOUR_REPO_URL>
+cd ptitedu
+```
 
+## Cấu hình môi trường (.env)
 
-1.  Trong Visual Studio Code, mở **Terminal** (Phím tắt: `Ctrl + J` hoặc menu Terminal -> New Terminal).
-2.  Nhập lệnh sau để vào thư mục backend:
-    ```bash
-    cd backend
-    ```
-3.  **QUAN TRỌNG:** Chạy lệnh sau để máy tự động tải các thư viện về (Express, MySQL, Nodemailer...):
-    ```bash
-    npm install
-    ```
-    *(Chờ khoảng 1-2 phút đến khi chạy xong).* Nếu chạy lỗi gì thì tham khảo AI :D
-4.  **Tạo file cấu hình bảo mật:**
-    * Nhìn sang cột danh sách file bên trái, trong thư mục `backend`, chuột phải vào vùng trống chọn **New File**.
-    * Đặt tên file là `.env` (có dấu chấm ở đầu).
-    * Copy nội dung dưới đây dán vào file `.env` đó và lưu lại (`Ctrl + S`):
-    Phần này lấy API Key của Gemini AI và thông tin email để gửi mail xác nhận cho người dùng đăng ký.
-    ```env
-    PORT=5000
-    GEMINI_API_KEY=
+### Backend
 
-    EMAIL_USER=
-    EMAIL_PASS=
-    ```
+Tạo file `backend/.env` từ mẫu:
 
----
+```bash
+cd backend
+copy .env.example .env
+```
 
-## 🎨 PHẦN 5: CÀI ĐẶT FRONTEND (GIAO DIỆN)
+Sau đó chỉnh các biến (tối thiểu là MySQL):
 
-*Bước này giúp tải ReactJS, thư viện 3D, Slider... về máy.*
+```env
+PORT=5000
+DB_HOST=127.0.0.1
+DB_USER=root
+DB_PASSWORD=
+DB_NAME=ptit_edu
+```
 
-1.  Vẫn ở Terminal, mở thêm một tab Terminal mới (bấm dấu `+` ở góc phải bảng Terminal).
-2.  Nhập lệnh để vào thư mục frontend:
-    ```bash
-    cd frontend
-    ```
-3.  **QUAN TRỌNG:** Chạy lệnh sau để tải toàn bộ thư viện giao diện (React, Three.js, Slick...):
-    ```bash
-    npm install
-    ```
-    *(Bước này sẽ tốn khoảng 3-5 phút, hãy kiên nhẫn chờ. Nếu thấy chữ "warning" màu vàng thì kệ nó, miễn không báo "error" màu đỏ là được).*
+Các biến tuỳ chọn:
 
----
+```env
+GEMINI_API_KEY=
+EMAIL_USER=
+EMAIL_PASS=
+```
 
-## 🚀 PHẦN 6: CHẠY DỰ ÁN (START)
+### Frontend
 
-Để web chạy được, bạn cần bật cả 2 terminal cùng lúc.
+Tạo file `frontend/.env` từ mẫu:
 
-**Terminal 1 (Backend):**
-* Đang ở thư mục `backend`, gõ lệnh:
-    ```bash
-    node server.js
-    ```
-* Thấy báo: `✅ Kết nối MySQL thành công!` là OK.
+```bash
+cd ..\frontend
+copy .env.example .env
+```
 
-**Terminal 2 (Frontend):**
-* Đang ở thư mục `frontend`, gõ lệnh:
-    ```bash
-    npm start
-    ```
-* Chờ một chút, trình duyệt sẽ tự bật trang web lên tại địa chỉ: `http://localhost:3000`
+Mặc định frontend gọi backend local:
 
----
+```env
+VITE_API_BASE_URL=http://localhost:5000
+```
 
-### ❓ Xử lý lỗi thường gặp: tham khảo AI hoặc ib :D
+## Import database
+
+Dùng script có sẵn (đọc file `csdl/ptit.sql`):
+
+```bash
+npm run db:import
+```
+
+Nếu muốn reset sạch (xoá DB hiện tại rồi import lại):
+
+```bash
+npm run db:import -- --reset
+```
+
+## Chạy dự án
+
+### Cách 1: Chạy 1 lệnh (root)
+
+```bash
+npm start
+```
+
+### Cách 2: Chạy 2 terminal (ổn định nhất trên Windows)
+
+Terminal 1:
+
+```bash
+cd backend
+npm start
+```
+
+Terminal 2:
+
+```bash
+cd frontend
+npm run dev
+```
+
+## Lỗi thường gặp
+
+- **Port 3000 bị chiếm**: Vite sẽ tự nhảy sang port khác (ví dụ 3001). Xem log terminal để biết port chính xác.
+- **MySQL access denied / cannot connect**: kiểm tra MySQL đang chạy và các biến `DB_HOST/DB_USER/DB_PASSWORD/DB_NAME` trong `backend/.env`.
+
+## Gửi lên GitHub (gợi ý)
+
+Repo đã có `.gitignore` để tránh push `node_modules/`, `dist/`, `.env`, uploads.
+
+```bash
+git add .
+git commit -m "Initial commit"
+git remote add origin <YOUR_REPO_URL>
+git push -u origin main
+```

@@ -18,9 +18,22 @@
 .DS_Store
 .env
 .env.*
+!.env.example
+!.env.*.example
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
+
+# Windows
+Thumbs.db
+Desktop.ini
+
+# Vite
+frontend/.vite/
+
+# Runtime uploads (generated)
+backend/public/user/
+backend/public/uploads/
  
 # Thêm vài quy tắc gợi ý cho repo ptitedu
 # - Giữ nguyên ignore cho node_modules, build, dist, env logs

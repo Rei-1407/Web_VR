@@ -1,18 +1,13 @@
 const mysql = require("mysql2");
 
-const db = mysql.createConnection({
-  host: "127.0.0.1",
-  user: "root",
-  password: "123456",
-  database: "ptit_edu",
+const pool = mysql.createPool({
+  host: process.env.DB_HOST || "127.0.0.1",
+  user: process.env.DB_USER || "root",
+  password: process.env.DB_PASSWORD || "",
+  database: process.env.DB_NAME || "ptit_edu",
+  waitForConnections: true,
+  connectionLimit: 10,
+  queueLimit: 0,
 });
 
-db.connect((err) => {
-  if (err) {
-    console.error("❌ Lỗi kết nối MySQL:", err);
-    return;
-  }
-  console.log("✅ Kết nối MySQL thành công!");
-});
-
-module.exports = db;
+module.exports = pool;

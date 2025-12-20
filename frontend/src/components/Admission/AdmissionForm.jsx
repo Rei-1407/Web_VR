@@ -1,6 +1,8 @@
 import React, { useState } from "react";
 import "./AdmissionForm.css";
 
+import { apiUrl } from "../../config/api";
+
 // DANH SÁCH NGÀNH ĐÀO TẠO (Cập nhật đầy đủ từ ảnh)
 const MAJORS = [
   "An toàn thông tin (7480202)",
@@ -79,7 +81,7 @@ const AdmissionForm = () => {
     }
 
     try {
-      const response = await fetch("http://localhost:5000/api/admission", {
+      const response = await fetch(apiUrl("api/admission"), {
         method: "POST",
         body: data,
       });

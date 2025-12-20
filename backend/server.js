@@ -1,8 +1,8 @@
 const express = require("express");
 const cors = require("cors");
-const db = require("./db"); // Đảm bảo file db.js của bạn cấu hình đúng
 const path = require("path");
 require("dotenv").config();
+const db = require("./db"); // Đảm bảo file db.js của bạn cấu hình đúng
 const { GoogleGenerativeAI } = require("@google/generative-ai");
 
 // Bỏ body-parser nếu dùng Express > 4.16 (Express đã tích hợp sẵn)
@@ -209,7 +209,7 @@ app.post("/api/admission", upload.array('files'), async (req, res) => {
   });
 });
 
-const PORT = 5000;
+const PORT = Number(process.env.PORT) || 5000;
 app.listen(PORT, () => {
-  console.log("Backend chạy tại http://localhost:5000");
+  console.log(`Backend chạy tại http://localhost:${PORT}`);
 });

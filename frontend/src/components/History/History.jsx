@@ -2,15 +2,14 @@ import React, { useEffect, useState } from "react";
 import { motion } from "framer-motion";
 import "./History.css";
 
-// Đường dẫn tới folder public của backend để lấy ảnh
-const API_BASE_URL = "http://localhost:5000/public/";
+import { apiUrl, publicUrl } from "../../config/api";
 
 function History() {
   const [events, setEvents] = useState([]);
 
   // Gọi API lấy danh sách sự kiện
   useEffect(() => {
-    fetch("http://localhost:5000/api/history")
+    fetch(apiUrl("api/history"))
       .then((res) => res.json())
       .then((data) => setEvents(data))
       .catch((err) => console.error("Lỗi tải lịch sử:", err));
@@ -64,7 +63,7 @@ function TimelineItem({ item, index }) {
         {item.image && (
           <div className="history-image-wrapper">
             <img 
-              src={`${API_BASE_URL}${item.image}`} 
+              src={publicUrl(item.image)} 
               alt={item.title} 
               className="history-img"
               // onError={(e) => { e.target.style.display = 'none'; }} // Ẩn nếu ảnh lỗi

@@ -1,13 +1,13 @@
 import React, { useEffect } from "react";
 import { useLocation } from "react-router-dom";
-import Navbar from "../Navbar/Navbar";
-import Slider from "../Slider/Slider";
-import History from "../History/History";
-import Achievements from "../Achievements/Achievements";
-import Partners from "../Partners/Partners";
-import CampusShowcase from "../Campus3D/CampusShowcase";
-import Footer from "../Footer/Footer";
-import AdmissionForm from "../Admission/AdmissionForm";
+import Navbar from "../Navbar/Navbar.jsx";
+import Slider from "../Slider/Slider.jsx";
+import History from "../History/History.jsx";
+import Achievements from "../Achievements/Achievements.jsx";
+import Partners from "../Partners/Partners.jsx";
+import CampusShowcase from "../Campus3D/CampusShowcase.jsx";
+import Footer from "../Footer/Footer.jsx";
+import AdmissionForm from "../Admission/AdmissionForm.jsx";
 
 export default function Home() {
   const location = useLocation();
