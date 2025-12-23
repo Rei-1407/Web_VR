@@ -10,9 +10,11 @@ function Slider() {
   const [direction, setDirection] = useState("next"); 
   const [loading, setLoading] = useState(true);
 
-  // Biến lưu vị trí kéo chuột/tay
-  const touchStartX = useRef(0);
-  const touchEndX = useRef(0);
+  // Swipe/drag state (unified via Pointer Events)
+  const pointerStartX = useRef(0);
+  const pointerLastX = useRef(0);
+  const isPointerDown = useRef(false);
+  const activePointerId = useRef(null);
 
   // 1. Gọi API lấy dữ liệu
   useEffect(() => {
@@ -69,29 +71,40 @@ function Slider() {
   }, [slides.length, index, animating, changeSlide]); 
 
   // === XỬ LÝ KÉO THẢ (SWIPE) ===
-  const handleTouchStart = (e) => {
-    touchStartX.current = e.targetTouches ? e.targetTouches[0].clientX : e.clientX;
+  const minSwipeDistance = 50; // Kéo ít nhất 50px mới tính
+
+  const handlePointerDown = (e) => {
+    // Ignore right-click or non-primary buttons
+    if (typeof e.button === "number" && e.button !== 0) return;
+    isPointerDown.current = true;
+    activePointerId.current = e.pointerId;
+    pointerStartX.current = e.clientX;
+    pointerLastX.current = e.clientX;
+    // Capture pointer so we still get the up event even if pointer leaves the element
+    e.currentTarget.setPointerCapture?.(e.pointerId);
   };
 
-  const handleTouchMove = (e) => {
-    touchEndX.current = e.targetTouches ? e.targetTouches[0].clientX : e.clientX;
+  const handlePointerMove = (e) => {
+    if (!isPointerDown.current) return;
+    if (activePointerId.current !== e.pointerId) return;
+    pointerLastX.current = e.clientX;
   };
 
-  const handleTouchEnd = () => {
-    if (!touchStartX.current || !touchEndX.current) return;
-    
-    const distance = touchStartX.current - touchEndX.current;
-    const minSwipeDistance = 50; // Kéo ít nhất 50px mới tính
+  const finishPointerGesture = (e) => {
+    if (!isPointerDown.current) return;
+    if (activePointerId.current !== e.pointerId) return;
 
+    const distance = pointerStartX.current - pointerLastX.current;
     if (distance > minSwipeDistance) {
-      changeSlide("next"); // Kéo sang trái -> Next
+      changeSlide("next");
     } else if (distance < -minSwipeDistance) {
-      changeSlide("prev"); // Kéo sang phải -> Prev
+      changeSlide("prev");
     }
 
-    // Reset tọa độ
-    touchStartX.current = 0;
-    touchEndX.current = 0;
+    isPointerDown.current = false;
+    activePointerId.current = null;
+    pointerStartX.current = 0;
+    pointerLastX.current = 0;
   };
 
   if (loading) return <div className="slider-loading"></div>;
@@ -113,13 +126,15 @@ function Slider() {
   return (
     <div 
       className="movie-slider"
-      /* Sự kiện chuột & cảm ứng */
-      onTouchStart={handleTouchStart}
-      onTouchMove={handleTouchMove}
-      onTouchEnd={handleTouchEnd}
-      onMouseDown={handleTouchStart}
-      onMouseMove={handleTouchMove}
-      onMouseUp={handleTouchEnd}
+      /* Pointer Events (touch + mouse + pen) */
+      onPointerDown={handlePointerDown}
+      onPointerMove={handlePointerMove}
+      onPointerUp={finishPointerGesture}
+      onPointerCancel={finishPointerGesture}
+      onPointerLeave={(e) => {
+        // If the pointer leaves while dragging, treat it like a cancel
+        if (isPointerDown.current) finishPointerGesture(e);
+      }}
     >
       <div className="slider-img-wrapper">
         <img 
@@ -133,13 +148,19 @@ function Slider() {
 
         <div className="slider-text-wrapper">
           
-          <div className={`slider-content ${animating ? (direction === "next" ? "slide-out-left" : "slide-out-right") : "active"}`}>
+          <div
+            key={`active-${index}`}
+            className={`slider-content ${animating ? (direction === "next" ? "slide-out-left" : "slide-out-right") : "active"}`}
+          >
             <h1 className="slider-main-title">{currentSlide.title}</h1>
             <div className="slider-divider"></div>
             <p className="slider-desc">{currentSlide.description}</p>
           </div>
 
-          <div className={`slider-content incoming ${direction} ${animating ? "slide-in" : ""}`}>
+          <div
+            key={`incoming-${nextSlideIndex}-${direction}`}
+            className={`slider-content incoming ${direction} ${animating ? "slide-in" : ""}`}
+          >
             <h1 className="slider-main-title">{nextSlideData.title}</h1>
             <div className="slider-divider"></div>
             <p className="slider-desc">{nextSlideData.description}</p>

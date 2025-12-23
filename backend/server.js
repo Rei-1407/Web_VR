@@ -33,7 +33,7 @@ app.use("/public", express.static(path.join(__dirname, "public")));
 // --- CẤU HÌNH GEMINI ---
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
 // Lưu ý: Dùng model gemini-1.5-flash để ổn định hơn (2.5 có thể chưa public rộng rãi)
-const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
+const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
 
 const SYSTEM_INSTRUCTION = `
 Bạn là Trợ lý ảo AI của Học viện Công nghệ Bưu chính Viễn thông (PTIT).

@@ -6,6 +6,7 @@
   background: #000;
   cursor: grab; /* Con trỏ hình bàn tay */
   user-select: none; /* Không cho bôi đen chữ khi kéo */
+  touch-action: pan-y;
 }
 
 .movie-slider:active {

@@ -77,7 +77,8 @@ const CampusModal = ({ campus, onClose }) => {
   };
 
   const handleViewVR = () => {
-    navigate(`/tour/${campus.id}?vr=1`, { state: { campus: campus, vr: true } });
+    navigate(`/tour-vr/${campus.id}`, { state: { campus: campus } });
+    onClose?.();
   };
 
   return (

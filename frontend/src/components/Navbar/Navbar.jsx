@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import "./Navbar.css";
-
+import logo from "../../assets/images/logo.png"
 // Stable nav list (prevents useEffect deps from changing every render)
 const NAV_ITEMS = [
   { id: "home", label: "Giới thiệu" },
@@ -62,7 +62,7 @@ const Navbar = () => {
       <div className="nav-container">
         {/* Logo hoặc Tên trường */}
         <div className="nav-logo" onClick={() => scrollToSection("home")}>
-          <i className="bi bi-mortarboard-fill"></i> PTIT EDU
+          <img src={logo} alt="PTIT Logo" className="navbar-logo" /> P-TOUR
         </div>
 
         {/* Menu Items */}

@@ -1,5 +1,5 @@
 import React, { Suspense, useState, useEffect, useCallback, useRef } from "react";
-import { useLocation, useNavigate } from "react-router-dom";
+import { useLocation, useNavigate, useParams } from "react-router-dom";
 import { Canvas, useFrame, useThree } from "@react-three/fiber";
 import { Html, useProgress, PointerLockControls, Environment } from "@react-three/drei";
 import * as THREE from "three";
@@ -7,7 +7,7 @@ import ModelViewer from "./ModelViewer";
 import FirstPersonCamera from "./FirstPersonCamera";
 import "./CampusViewerPage.css";
 
-import { publicUrl } from "../../config/api";
+import { apiUrl, publicUrl } from "../../config/api";
 
 function Loader() {
   const { progress } = useProgress();
@@ -109,7 +109,7 @@ function VRLocomotion({ active, speed = 3, camRef, resetToken }) {
       const now = performance.now() / 1000;
       const cooldown = 0.35; // seconds
       if (Math.abs(snapX) >= snapThreshold && now - lastSnap.current > cooldown) {
-        const angle = (snapX > 0 ? -1 : 1) * (Math.PI / 4); // 45 degrees
+        const angle = (snapX > 0 ? 1 : -1) * (Math.PI / 4); // 45 degrees
         yawOffset.current += angle;
         lastSnap.current = now;
       }
@@ -123,7 +123,7 @@ function VRLocomotion({ active, speed = 3, camRef, resetToken }) {
         const now = performance.now() / 1000;
         const cooldown = 0.35;
         if (Math.abs(snapX) >= snapThreshold && now - lastSnap.current > cooldown) {
-          const angle = (snapX > 0 ? -1 : 1) * (Math.PI / 4);
+          const angle = (snapX > 0 ? 1 : -1) * (Math.PI / 4);
           yawOffset.current += angle;
           lastSnap.current = now;
         }
@@ -208,12 +208,11 @@ VRLocomotion.reset = () => {
 
 
 
-export default function CampusViewerPage() {
+export default function CampusViewerPage({ mode = "3d" }) {
   const location = useLocation();
   const navigate = useNavigate();
+  const { id } = useParams();
   const [isLocked, setIsLocked] = useState(false);
-  const searchParams = new URLSearchParams(location.search);
-  const wantsVR = searchParams.get("vr") === "1" || Boolean(location.state?.vr);
   const [isXRActive, setIsXRActive] = useState(false);
   const [isContextLost, setIsContextLost] = useState(false);
   const [vrResetToken, setVrResetToken] = useState(0);
@@ -221,13 +220,45 @@ export default function CampusViewerPage() {
   const playerRef = useRef(null);
   const camRef = useRef(null);
 
-  const campus = location.state?.campus;
+  const isVRPage = mode === "vr";
+
+  const [campus, setCampus] = useState(location.state?.campus || null);
 
   useEffect(() => {
-    if (!campus) {
+    if (location.state?.campus) setCampus(location.state.campus);
+  }, [location.state]);
+
+  useEffect(() => {
+    let cancelled = false;
+    if (campus) return;
+    if (!id) {
       navigate("/");
+      return;
     }
-  }, [campus, navigate]);
+
+    fetch(apiUrl("api/campus"))
+      .then((res) => res.json())
+      .then((data) => {
+        if (cancelled) return;
+        if (!Array.isArray(data)) {
+          navigate("/");
+          return;
+        }
+        const found = data.find((c) => String(c.id) === String(id));
+        if (!found) {
+          navigate("/");
+          return;
+        }
+        setCampus(found);
+      })
+      .catch(() => {
+        if (!cancelled) navigate("/");
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [campus, id, navigate]);
 
   const startVR = useCallback(async () => {
     const gl = glRef.current;
@@ -264,13 +295,6 @@ export default function CampusViewerPage() {
   }, []);
 
   useEffect(() => {
-    if (wantsVR && glRef.current) {
-      const t = setTimeout(() => startVR(), 500);
-      return () => clearTimeout(t);
-    }
-  }, [startVR, wantsVR]);
-
-  useEffect(() => {
     return () => {
       stopVR();
     };
@@ -282,6 +306,16 @@ export default function CampusViewerPage() {
     }
     if (isXRActive) stopVR();
     setIsLocked(false);
+
+    if (isVRPage && window.opener) {
+      try {
+        window.close();
+        return;
+      } catch {
+        // fall back to navigate
+      }
+    }
+
     navigate("/", { state: { scrollTo: "campus" } });
   };
 
@@ -296,14 +330,17 @@ export default function CampusViewerPage() {
         </button>
       </div>
 
-      <div className="vr-button-container">
-        <button className="vr-ui-button" onClick={isXRActive ? stopVR : startVR}>
-          {isXRActive ? "THOAT VR" : "BAT DAU VR"}
-        </button>
-        <p className="vr-hint">Deo kinh roi bam VR. Trong VR: joystick de di chuyen, xoay dau de nhin.</p>
-      </div>
+      {isVRPage && (
+        <div className="vr-button-container">
+          <button className="vr-ui-button" onClick={isXRActive ? stopVR : startVR}>
+            {isXRActive ? "Thoát chế độ VR" : "Bắt đầu chế độ VR"}
+          </button>
+          <p className="vr-hint">Kết nối với kính và controller để di chuyển. Sử dụng Joystick trái để di chuyển, Joystick phải để xoay góc nhìn.</p>
+        </div>
+      )}
 
       {/* 2. Bảng Hướng dẫn Điều khiển (Góc trên trái, dưới nút Back) */}
+      {!isVRPage && (
       <div className="controls-panel">
         <h4 className="controls-title">HƯỚNG DẪN</h4>
         
@@ -338,15 +375,16 @@ export default function CampusViewerPage() {
           <span className="control-label">Hiện con trỏ chuột</span>
         </div>
       </div>
+      )}
 
       {/* 3. Man hinh Canvas 3D */}
       <div className="three-canvas-container">
         {/* Thong bao Click de bat dau (chi hien thi khi chua khoa chuot va chua vao VR) */}
-        {!isLocked && !isXRActive && (
+        {!isVRPage && !isLocked && !isXRActive && (
           <div className="start-prompt" onClick={() => setIsLocked(true)}>
             <div className="prompt-content">
               <i className="bi bi-cursor-fill"></i>
-              <span>CLICK VAO MAN HINH DE BAT DAU</span>
+              <span>CLICK VÀO MÀN HÌNH ĐỂ BẮT ĐẦU</span>
             </div>
           </div>
         )}
@@ -354,7 +392,9 @@ export default function CampusViewerPage() {
         <Canvas
           shadows
           camera={{ position: [0, 2, 5], fov: 75 }}
-          onClick={() => { if (!isXRActive) setIsLocked(true); }}
+          className="r3f-canvas"
+          gl={{ antialias: true, alpha: false, powerPreference: "high-performance" }}
+          onClick={() => { if (!isVRPage && !isXRActive) setIsLocked(true); }}
           onCreated={({ gl, camera: createdCamera }) => {
             glRef.current = gl;
             camRef.current = createdCamera;
@@ -398,14 +438,15 @@ export default function CampusViewerPage() {
           </Suspense>
 
           <VRLocomotion active={isXRActive} camRef={camRef} resetToken={vrResetToken} />
-          <VRDebug active={isXRActive} />
+          {/* Hide debug overlay by default to avoid confusing the on-screen mirror */}
+          {/* <VRDebug active={isXRActive} /> */}
 
-          {!isXRActive && isLocked && (
+          {!isVRPage && !isXRActive && isLocked && (
             <PointerLockControls
               onUnlock={() => setIsLocked(false)}
             />
           )}
-          <FirstPersonCamera active={!isXRActive && isLocked} playerRef={playerRef} />
+          {!isVRPage && <FirstPersonCamera active={!isXRActive && isLocked} playerRef={playerRef} />}
         </Canvas>
       </div>
     </div>
