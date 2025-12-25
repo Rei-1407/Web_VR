@@ -22,11 +22,18 @@ function Loader() {
 
 function VRLocomotion({ active, speed = 3, camRef, resetToken }) {
   const { gl, camera } = useThree();
+
+  // Cached vectors/quats (không cấp phát mỗi frame)
   const forward = useRef(new THREE.Vector3());
   const right = useRef(new THREE.Vector3());
   const up = useRef(new THREE.Vector3(0, 1, 0));
+  const moveDir = useRef(new THREE.Vector3());
+  const yawQuat = useRef(new THREE.Quaternion());
+  const headingQuat = useRef(new THREE.Quaternion());
+
   const lastSnap = useRef(0);
   const lastLog = useRef(0);
+
   const baseRefSpace = useRef(null);
   const offset = useRef(new THREE.Vector3(0, 0, 0));
   const yawOffset = useRef(0);
@@ -37,126 +44,184 @@ function VRLocomotion({ active, speed = 3, camRef, resetToken }) {
     yawOffset.current = 0;
   }, [resetToken]);
 
-  const pickPadAxes = (pads, prefer) => {
+  const DEAD_ZONE = 0.15;
+
+  // Sprint + fly config (ổn định trên Quest)
+  const SPRINT_MULT = 2.5; // giữ trigger phải để chạy nhanh
+  const FLY_SPEED = 1.8;   // joystick phải trục Y để bay lên/xuống (unit/sec)
+
+  const clampDeadZone = (v) => (Math.abs(v) < DEAD_ZONE ? 0 : v);
+
+  const pickPad = (pads, prefer) => {
     if (!pads || pads.length === 0) return null;
-    const pad = prefer === "right" ? pads[1] || pads[0] : pads[0];
-    if (!pad || !pad.axes) return null;
-    const axes = Array.from(pad.axes);
-    return axes;
+    return prefer === "right" ? pads[1] || pads[0] : pads[0];
   };
 
-  useFrame((_, delta) => {
+  const getNavigatorPads = () =>
+    navigator.getGamepads ? Array.from(navigator.getGamepads()).filter(Boolean) : [];
+
+  // Axes helper: ưu tiên mapping kiểu Quest (2/3), fallback (0/1)
+  const readStick = (gamepad, prefer23 = true) => {
+    const axes = gamepad?.axes || [];
+    if (!axes.length) return { x: 0, y: 0 };
+    const x = prefer23 && axes[2] !== undefined ? axes[2] : axes[0] || 0;
+    const y = prefer23 && axes[3] !== undefined ? axes[3] : axes[1] || 0;
+    return { x, y };
+  };
+
+  // Trigger helper: tìm nút có analog value (thường trigger)
+  const isTriggerHeld = (gamepad) => {
+    const btns = gamepad?.buttons || [];
+    // trigger thường có value > 0 khi bóp
+    return btns.some((b) => b && (b.value > 0.25 || b.pressed));
+  };
+
+  useFrame((_, deltaRaw) => {
     if (!active) return;
+
     const session = gl.xr?.getSession?.();
     if (!session) return;
 
-    // Some browsers/devices may not expose WebXR transforms
     if (typeof XRRigidTransform === "undefined") return;
 
+    // clamp delta để tránh teleport khi lag
+    const delta = Math.min(deltaRaw, 0.05);
+
     const sources = Array.from(session.inputSources || []).filter((s) => s && s.gamepad);
-    const left = sources.find((s) => s.handedness === "left") || sources[0];
-    const rightHand = sources.find((s) => s.handedness === "right");
+    const leftSrc = sources.find((s) => s.handedness === "left") || sources[0];
+    const rightSrc = sources.find((s) => s.handedness === "right") || sources[1];
 
-    // Quest gamepad mapping: axes[2]/[3] for joysticks; fallback to 0/1 if needed
-    const axes = left?.gamepad?.axes || [];
-    let xAxis = axes[2] !== undefined ? axes[2] : axes[0] || 0; // left/right
-    let yAxis = axes[3] !== undefined ? axes[3] : axes[1] || 0; // forward/back
+    // ---- 1) Read left stick for movement (XZ) ----
+    let { x: xAxis, y: yAxis } = readStick(leftSrc?.gamepad, true);
 
-    // Fallback: navigator.getGamepads (thường hoạt động với Quest Link)
+    // Fallback: navigator.getGamepads (Quest Link hay dùng)
     if (xAxis === 0 && yAxis === 0) {
-      const pads = navigator.getGamepads ? Array.from(navigator.getGamepads()).filter(Boolean) : [];
-      const gpAxes = pickPadAxes(pads, "left");
-      if (gpAxes && gpAxes.length >= 2) {
-        xAxis = gpAxes[2] !== undefined ? gpAxes[2] : gpAxes[0] || 0;
-        yAxis = gpAxes[3] !== undefined ? gpAxes[3] : gpAxes[1] || 0;
-      }
+      const pads = getNavigatorPads();
+      const gp = pickPad(pads, "left");
+      const stick = readStick(gp, true);
+      xAxis = stick.x;
+      yAxis = stick.y;
     }
 
-    const deadZone = 0.15;
-    if (Math.abs(xAxis) < deadZone) xAxis = 0;
-    if (Math.abs(yAxis) < deadZone) yAxis = 0;
-    if (xAxis === 0 && yAxis === 0) {
-      // even if not moving, still allow snap turn below
-    }
+    xAxis = clampDeadZone(xAxis);
+    yAxis = clampDeadZone(yAxis);
 
-    // Lấy heading từ camera XR hiện tại (bám theo hướng nhìn thực) + snap yaw
-    const xrCam = gl.xr?.getCamera?.(camRef?.current || camera)?.cameras?.[0]
-      || gl.xr?.getCamera?.(camRef?.current || camera)
-      || camRef?.current
-      || camera;
+    // ---- 2) Heading from XR camera + snap yaw ----
+    const xrCam =
+      gl.xr?.getCamera?.(camRef?.current || camera)?.cameras?.[0] ||
+      gl.xr?.getCamera?.(camRef?.current || camera) ||
+      camRef?.current ||
+      camera;
+
     const camQuat = xrCam.quaternion;
-    const yawQuat = new THREE.Quaternion().setFromAxisAngle(up.current, yawOffset.current);
-    const headingQuat = new THREE.Quaternion().multiplyQuaternions(yawQuat, camQuat);
-    forward.current.set(0, 0, -1).applyQuaternion(headingQuat);
+
+    yawQuat.current.setFromAxisAngle(up.current, yawOffset.current);
+    headingQuat.current.multiplyQuaternions(yawQuat.current, camQuat);
+
+    forward.current.set(0, 0, -1).applyQuaternion(headingQuat.current);
     forward.current.y = 0;
     forward.current.normalize();
     right.current.crossVectors(up.current, forward.current).normalize().multiplyScalar(-1);
 
-    // Move vector theo hướng nhìn (dựng trên heading hiện tại)
-    if (xAxis !== 0 || yAxis !== 0) {
-      const moveDir = new THREE.Vector3();
-      moveDir.copy(forward.current).multiplyScalar(yAxis); // yAxis dương: tiến
-      moveDir.addScaledVector(right.current, -xAxis); // đảo trục X để phải là phải
-      const moveSpeed = speed * delta;
-      offset.current.addScaledVector(moveDir, moveSpeed);
-    }
-
-    // Snap turn với tay phải (cập nhật yaw offset)
-    if (rightHand?.gamepad?.axes?.length) {
-      const rAxes = rightHand.gamepad.axes;
-      const snapX = rAxes[2] !== undefined ? rAxes[2] : rAxes[0] || 0;
-      const snapThreshold = 0.6;
-      const now = performance.now() / 1000;
-      const cooldown = 0.35; // seconds
-      if (Math.abs(snapX) >= snapThreshold && now - lastSnap.current > cooldown) {
-        const angle = (snapX > 0 ? 1 : -1) * (Math.PI / 4); // 45 degrees
-        yawOffset.current += angle;
-        lastSnap.current = now;
-      }
+    // ---- 3) Sprint (trigger right) ----
+    let sprintMul = 1;
+    if (isTriggerHeld(rightSrc?.gamepad)) {
+      sprintMul = SPRINT_MULT;
     } else {
-      // Fallback snap turn using standard gamepad
-      const pads = navigator.getGamepads ? Array.from(navigator.getGamepads()).filter(Boolean) : [];
-      const gpAxes = pickPadAxes(pads, "right");
-      if (gpAxes && gpAxes.length) {
-        const snapX = gpAxes[2] !== undefined ? gpAxes[2] : gpAxes[0] || 0;
-        const snapThreshold = 0.6;
-        const now = performance.now() / 1000;
-        const cooldown = 0.35;
-        if (Math.abs(snapX) >= snapThreshold && now - lastSnap.current > cooldown) {
-          const angle = (snapX > 0 ? 1 : -1) * (Math.PI / 4);
-          yawOffset.current += angle;
-          lastSnap.current = now;
-        }
-      }
+      const pads = getNavigatorPads();
+      const gpRight = pickPad(pads, "right");
+      if (isTriggerHeld(gpRight)) sprintMul = SPRINT_MULT;
     }
 
-    // Áp dụng offset + yaw vào reference space
+    // ---- 4) Move XZ ----
+    if (xAxis !== 0 || yAxis !== 0) {
+      moveDir.current.copy(forward.current).multiplyScalar(yAxis);
+      moveDir.current.addScaledVector(right.current, -xAxis);
+      const moveSpeed = speed * sprintMul * delta;
+      offset.current.addScaledVector(moveDir.current, moveSpeed);
+    }
+
+    // ---- 5) Snap turn with right stick X (giữ nguyên như bạn) ----
+    let snapX = 0;
+    if (rightSrc?.gamepad) {
+      const r = readStick(rightSrc.gamepad, true);
+      snapX = r.x;
+    } else {
+      const pads = getNavigatorPads();
+      const gpRight = pickPad(pads, "right");
+      const r = readStick(gpRight, true);
+      snapX = r.x;
+    }
+
+    snapX = clampDeadZone(snapX);
+    const snapThreshold = 0.6;
+    const now = performance.now() / 1000;
+    const cooldown = 0.35;
+    if (Math.abs(snapX) >= snapThreshold && now - lastSnap.current > cooldown) {
+      const angle = (snapX > 0 ? 1 : -1) * (Math.PI / 4);
+      const x = offset.current.x;
+      const z = offset.current.z;
+
+      const c = Math.cos(-angle);
+      const s = Math.sin(-angle);
+
+      offset.current.x = x * c - z * s;
+      offset.current.z = x * s + z * c;
+
+      yawOffset.current += angle;
+      lastSnap.current = now;
+    }
+
+    // ---- 6) Fly up/down: right stick Y ----
+    // (Không dùng X/Y button để tránh mapping khác nhau)
+    let flyAxis = 0;
+    if (rightSrc?.gamepad) {
+      const r = readStick(rightSrc.gamepad, true);
+      flyAxis = r.y;
+    } else {
+      const pads = getNavigatorPads();
+      const gpRight = pickPad(pads, "right");
+      const r = readStick(gpRight, true);
+      flyAxis = r.y;
+    }
+
+    flyAxis = clampDeadZone(flyAxis);
+    if (flyAxis !== 0) {
+      // đẩy stick lên -> y âm, nên đảo dấu để bay lên
+      offset.current.y += flyAxis * FLY_SPEED * delta;
+
+      // clamp độ cao để an toàn
+      offset.current.y = Math.min(20, Math.max(-5, offset.current.y));
+    }
+
+    // ---- 7) Apply offset + yaw into reference space ----
     if (!baseRefSpace.current) {
       baseRefSpace.current = gl.xr.getReferenceSpace?.();
       if (!baseRefSpace.current) return;
     }
-    const yawQuatRef = yawQuat;
+
+    const q = yawQuat.current;
     const offsetRef = baseRefSpace.current.getOffsetReferenceSpace(
       new XRRigidTransform(
         { x: offset.current.x, y: offset.current.y, z: offset.current.z },
-        { x: yawQuatRef.x, y: yawQuatRef.y, z: yawQuatRef.z, w: yawQuatRef.w }
+        { x: q.x, y: q.y, z: q.z, w: q.w }
       )
     );
     gl.xr.setReferenceSpace(offsetRef);
 
-    // Throttle log gamepad values to console (1/s) để debug khi không thấy HUD
+    // ---- 8) Optional debug log (giữ nguyên behavior, 1 lần/giây) ----
     if (performance.now() - lastLog.current > 1000) {
       const summary = sources.map((s) => ({
         hand: s.handedness,
         axes: s.gamepad?.axes || [],
-        buttons: (s.gamepad?.buttons || []).map((b) => b.value)
+        buttons: (s.gamepad?.buttons || []).map((b) => b.value),
       }));
-      const pads = navigator.getGamepads ? Array.from(navigator.getGamepads()).filter(Boolean) : [];
+      const pads = getNavigatorPads();
       const gpSummary = pads.map((p, idx) => ({
         idx,
         id: p.id,
         axes: p.axes || [],
-        buttons: (p.buttons || []).map((b) => b.value)
+        buttons: (p.buttons || []).map((b) => b.value),
       }));
       console.log("XR gamepads", summary, "navigator pads", gpSummary);
       lastLog.current = performance.now();
@@ -361,6 +426,23 @@ export default function CampusViewerPage({ mode = "3d" }) {
 
         <div className="divider"></div>
 
+        {/* Nhóm Bay (Q/E) */}
+        <div className = "control-group horizontal">
+          <div className = "key-cap">Q</div>
+          <div className = "key-cap">E</div>
+          <span className = "control-label">Bay xuống / Bay lên</span>
+        </div>
+
+        <div className = "divider"></div>
+
+        {/* Nhóm tăng tốc (Shift) */}
+        <div className = "control-group horizontal">
+          <div className = "key-cap wide">SHIFT</div>
+          <span className = "control-label">Tăng tốc</span>
+        </div>
+
+        <div className = "divider"></div>
+
         {/* Nhóm Nhìn */}
         <div className="control-group horizontal">
           <div className="icon-box"><i className="bi bi-mouse"></i></div>
@@ -375,6 +457,7 @@ export default function CampusViewerPage({ mode = "3d" }) {
           <span className="control-label">Hiện con trỏ chuột</span>
         </div>
       </div>
+      
       )}
 
       {/* 3. Man hinh Canvas 3D */}
