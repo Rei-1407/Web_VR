@@ -172,6 +172,43 @@ function VRLocomotion({ active, speed = 3, camRef, resetToken }) {
       lastSnap.current = now;
     }
 
+    // ===== FLY UP / DOWN using X / Y buttons =====
+    const leftGamepad = leftSrc?.gamepad || (navigator.getGamepads && navigator.getGamepads()[2]);
+
+    if (leftGamepad && leftGamepad.buttons) { 
+    const buttons = leftGamepad.buttons;
+    const isXPressed = buttons[4]?.pressed; 
+    const isYPressed = buttons[5]?.pressed;
+
+    const FLY_SPEED = 1.6;
+
+    if (isYPressed) {
+      offset.current.y -= FLY_SPEED * delta;
+    }
+
+    if (isXPressed) {
+      offset.current.y += FLY_SPEED * delta;
+    }
+  }
+/*    const rightGamepad = rightSrc?.gamepad || (navigator.getGamepads && navigator.getGamepads()[1]);
+
+    if (rightGamepad && rightGamepad.buttons) { 
+    const buttons = rightGamepad.buttons;
+    const isAPressed = buttons[4]?.pressed; 
+    const isBPressed = buttons[5]?.pressed;
+
+    const FLY_SPEED = 1.6;
+
+    if (isAPressed) {
+      offset.current.y -= FLY_SPEED * delta;
+    }
+
+    if (isBPressed) {
+      offset.current.y += FLY_SPEED * delta;
+    }
+  }*/
+
+    /* Đây là bay bằng joystick
     // ---- 6) Fly up/down: right stick Y ----
     // (Không dùng X/Y button để tránh mapping khác nhau)
     let flyAxis = 0;
@@ -193,7 +230,7 @@ function VRLocomotion({ active, speed = 3, camRef, resetToken }) {
       // clamp độ cao để an toàn
       offset.current.y = Math.min(20, Math.max(-5, offset.current.y));
     }
-
+    */
     // ---- 7) Apply offset + yaw into reference space ----
     if (!baseRefSpace.current) {
       baseRefSpace.current = gl.xr.getReferenceSpace?.();
