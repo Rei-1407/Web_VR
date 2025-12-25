@@ -237,3 +237,12 @@
   border-radius: 8px;
   font-weight: bold;
 }
+
+/* Panel hướng dẫn góc trên bên phải (dùng lại style controls-panel) */
+.controls-panel-right {
+  top: 20px;      /* trên cao giống ảnh */
+  left: auto;     /* hủy left của controls-panel */
+  right: 20px;    /* canh phải */
+  width: 220px;
+  z-index: 90;
+}

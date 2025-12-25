@@ -361,6 +361,23 @@ export default function CampusViewerPage({ mode = "3d" }) {
 
         <div className="divider"></div>
 
+        {/* Nhóm Bay (Q/E) */}
+        <div className = "control-group horizontal">
+          <div className = "key-cap">Q</div>
+          <div className = "key-cap">E</div>
+          <span className = "control-label">Bay xuống / Bay lên</span>
+        </div>
+
+        <div className = "divider"></div>
+
+        {/* Nhóm tăng tốc (Shift) */}
+        <div className = "control-group horizontal">
+          <div className = "key-cap wide">SHIFT</div>
+          <span className = "control-label">Tăng tốc</span>
+        </div>
+
+        <div className = "divider"></div>
+
         {/* Nhóm Nhìn */}
         <div className="control-group horizontal">
           <div className="icon-box"><i className="bi bi-mouse"></i></div>
@@ -375,6 +392,7 @@ export default function CampusViewerPage({ mode = "3d" }) {
           <span className="control-label">Hiện con trỏ chuột</span>
         </div>
       </div>
+      
       )}
 
       {/* 3. Man hinh Canvas 3D */}
