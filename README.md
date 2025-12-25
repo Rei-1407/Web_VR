@@ -1,4 +1,4 @@
-# PTIT EDU (Fullstack)
+# P-TOUR (Fullstack)
 
 Website demo fullstack gồm:
 - **Backend**: Node.js + Express + MySQL
